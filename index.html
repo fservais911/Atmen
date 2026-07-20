@@ -110,7 +110,15 @@
     border-radius:24px 24px 0 0;
     padding:22px 22px calc(22px + env(safe-area-inset-bottom));
   }
-  #panel h2{font-size:.85rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-dim);margin:0 0 12px}
+  #panel h2{font-size:.85rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-dim);margin:0}
+  #panelHead{display:flex;justify-content:space-between;align-items:center;margin:0 0 12px}
+  #ver{letter-spacing:.08em;opacity:.6;font-size:.72rem;text-transform:none}
+  #closeX{
+    background:none;border:1px solid var(--line);border-radius:50%;
+    width:36px;height:36px;line-height:1;
+    color:var(--ink-dim);font-size:.95rem;cursor:pointer;
+  }
+  #closeX:focus-visible{outline:2px solid var(--breath-hi);outline-offset:2px}
   .rowlabel{font-size:.78rem;color:var(--ink-dim);letter-spacing:.12em;text-transform:uppercase;margin:18px 0 8px}
   .pills{display:flex;gap:8px;flex-wrap:wrap}
   .pill{
@@ -169,7 +177,10 @@
 <!-- settings -->
 <div id="settings" role="dialog" aria-modal="true" aria-label="Settings">
   <div id="panel">
-    <h2>Settings</h2>
+    <div id="panelHead">
+      <h2>Settings <span id="ver"></span></h2>
+      <button id="closeX" aria-label="Close settings">&#10005;</button>
+    </div>
 
     <div class="rowlabel">Presets</div>
     <div class="pills">
@@ -309,6 +320,10 @@
     const n = Math.floor(cfg.sessionMin * 60 / cyc);
     rhythm.textContent = `${cyc}s cycle \u00b7 ${bpm}/min \u00b7 ${n} breaths`;
   }
+
+  const APP_VERSION = 'v1.4';
+  $('ver').textContent = APP_VERSION;
+  $('closeX').onclick = () => $('closeSettings').click();
 
   $('gearBtn').onclick = () => { if (running) stop(true); settings.classList.add('open'); };
   $('closeSettings').onclick = () => { settings.classList.remove('open'); resetDisplay(); };
