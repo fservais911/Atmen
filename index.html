@@ -321,13 +321,26 @@
     rhythm.textContent = `${cyc}s cycle \u00b7 ${bpm}/min \u00b7 ${n} breaths`;
   }
 
-  const APP_VERSION = 'v1.4';
+  const APP_VERSION = 'v1.5';
   $('ver').textContent = APP_VERSION;
   $('closeX').onclick = () => $('closeSettings').click();
 
-  $('gearBtn').onclick = () => { if (running) stop(true); settings.classList.add('open'); };
-  $('closeSettings').onclick = () => { settings.classList.remove('open'); resetDisplay(); };
+  let lastFocus = null;
+  $('gearBtn').onclick = () => {
+    if (running) stop(true);
+    lastFocus = document.activeElement;
+    settings.classList.add('open');
+    $('closeX').focus();
+  };
+  $('closeSettings').onclick = () => {
+    settings.classList.remove('open');
+    resetDisplay();
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  };
   settings.addEventListener('click', e => { if (e.target === settings) $('closeSettings').click(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && settings.classList.contains('open')) $('closeSettings').click();
+  });
 
   // ---- options ----
   const toggles = { tone:true, voice:false };
@@ -389,7 +402,7 @@
   }
 
   let running = false, startTime = 0, rafId = 0;
-  let lastPhaseKey = '', lastClockStr = '', lastAria = -1;
+  let lastPhaseKey = '', lastClockStr = '';
   let phases = null;
 
   // Hand one whole phase to the browser as a CSS transition.
@@ -439,7 +452,7 @@
     grabWakeLock();
     phases = buildPhases();
     running = true;
-    lastPhaseKey = ''; lastClockStr = ''; lastAria = -1;
+    lastPhaseKey = ''; lastClockStr = '';
     startTime = performance.now();
     btn.textContent = 'Stop';
     btn.classList.add('stop');
