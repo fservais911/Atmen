@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#10172a">
+<title>Atmen wie Heike</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#10172a;
+    --bg-soft:#1a2340;
+    --breath-lo:#3fa9a0;
+    --breath-hi:#a9ece2;
+    --ink:#e9eef5;
+    --ink-dim:#7c8aa5;
+    --line:#28324f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Outfit',system-ui,sans-serif;
+    display:flex;flex-direction:column;align-items:center;
+    padding:max(env(safe-area-inset-top),16px) 20px max(env(safe-area-inset-bottom),16px);
+    user-select:none;-webkit-user-select:none;
+    touch-action:manipulation;
+    overflow:hidden;
+  }
+
+  header{width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:center;padding:4px 2px}
+  header h1{font-size:.8rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-dim)}
+  #gearBtn{background:none;border:none;color:var(--ink-dim);cursor:pointer;font-size:1.3rem;line-height:1;padding:6px}
+  #gearBtn:focus-visible{outline:2px solid var(--breath-hi);outline-offset:2px}
+
+  #clock{
+    font-size:clamp(3.4rem,16vw,5rem);
+    font-weight:200;font-variant-numeric:tabular-nums;letter-spacing:.02em;
+    margin-top:6px;line-height:1;
+  }
+  #phase{
+    height:1.6rem;margin-top:8px;
+    font-size:1.05rem;font-weight:400;letter-spacing:.34em;text-transform:uppercase;
+    color:var(--breath-hi);
+  }
+  #rhythm{font-size:.78rem;color:var(--ink-dim);margin-top:6px;font-variant-numeric:tabular-nums}
+
+  #columnWrap{
+    flex:1;min-height:0;width:100%;max-width:420px;
+    display:flex;align-items:center;justify-content:center;padding:16px 0;
+  }
+  #column{
+    position:relative;
+    width:clamp(88px,26vw,132px);
+    height:100%;max-height:48vh;
+    border-radius:999px;
+    background:var(--bg-soft);
+    border:1px solid var(--line);
+    overflow:hidden;
+    /* promote clipping context so the child transform stays on the compositor */
+    transform:translateZ(0);
+  }
+  #fill{
+    position:absolute;inset:0;
+    border-radius:999px;
+    background:linear-gradient(to top,var(--breath-lo),var(--breath-hi));
+    transform:translateY(100%);   /* hidden below at rest */
+    will-change:transform;
+  }
+  .tick{position:absolute;left:12%;right:12%;height:1px;background:var(--line)}
+
+  #controls{width:100%;max-width:420px;display:flex;flex-direction:column;gap:12px}
+  #startBtn{
+    width:100%;padding:18px;
+    font-family:inherit;font-size:1.05rem;font-weight:500;letter-spacing:.18em;text-transform:uppercase;
+    color:#0d1424;background:linear-gradient(135deg,var(--breath-hi),var(--breath-lo));
+    border:none;border-radius:16px;cursor:pointer;
+    transition:transform .12s;
+  }
+  #startBtn:active{transform:scale(.97)}
+  #startBtn.stop{background:none;border:1px solid var(--line);color:var(--ink-dim)}
+  #startBtn:focus-visible{outline:2px solid var(--breath-hi);outline-offset:3px}
+
+  #options{display:flex;gap:10px}
+  .opt{
+    flex:1;display:flex;align-items:center;justify-content:center;gap:8px;
+    padding:12px 8px;border-radius:12px;
+    border:1px solid var(--line);background:none;cursor:pointer;
+    font-family:inherit;font-size:.85rem;color:var(--ink-dim);
+    transition:color .2s,border-color .2s;
+  }
+  .opt[aria-pressed="true"]{color:var(--breath-hi);border-color:var(--breath-lo)}
+  .opt:focus-visible{outline:2px solid var(--breath-hi);outline-offset:2px}
+  .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+
+  /* ---------- settings panel ---------- */
+  #settings{
+    position:fixed;inset:0;
+    background:rgba(10,15,30,.6);
+    backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+    display:none;align-items:flex-end;justify-content:center;z-index:10;
+  }
+  #settings.open{display:flex}
+  #panel{
+    width:100%;max-width:460px;max-height:88vh;overflow-y:auto;
+    background:var(--bg-soft);
+    border:1px solid var(--line);border-bottom:none;
+    border-radius:24px 24px 0 0;
+    padding:22px 22px calc(22px + env(safe-area-inset-bottom));
+  }
+  #panel h2{font-size:.85rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-dim);margin:0 0 12px}
+  .rowlabel{font-size:.78rem;color:var(--ink-dim);letter-spacing:.12em;text-transform:uppercase;margin:18px 0 8px}
+  .pills{display:flex;gap:8px;flex-wrap:wrap}
+  .pill{
+    padding:9px 14px;border-radius:999px;border:1px solid var(--line);
+    background:none;color:var(--ink-dim);font-family:inherit;font-size:.82rem;cursor:pointer;
+    transition:color .15s,border-color .15s;
+  }
+  .pill[aria-pressed="true"]{color:var(--breath-hi);border-color:var(--breath-lo)}
+  .pill:focus-visible{outline:2px solid var(--breath-hi);outline-offset:2px}
+  .field{margin-bottom:14px}
+  .field label{display:flex;justify-content:space-between;font-size:.88rem;color:var(--ink);margin-bottom:4px}
+  .field label output{color:var(--breath-hi);font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%;appearance:none;-webkit-appearance:none;height:32px;background:none}
+  input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--line)}
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:26px;height:26px;border-radius:50%;
+    background:var(--breath-hi);margin-top:-11px;border:none;
+  }
+  input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--line)}
+  input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--breath-hi);border:none}
+  #closeSettings{
+    width:100%;margin-top:14px;padding:15px;
+    font-family:inherit;font-size:.95rem;font-weight:500;letter-spacing:.14em;text-transform:uppercase;
+    color:#0d1424;background:linear-gradient(135deg,var(--breath-hi),var(--breath-lo));
+    border:none;border-radius:14px;cursor:pointer;
+  }
+
+  @media (prefers-reduced-motion:reduce){ #startBtn{transition:none} }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Atmen wie Heike</h1>
+  <button id="gearBtn" aria-label="Settings">&#9881;</button>
+</header>
+
+<div id="clock">5:00</div>
+<div id="phase">&nbsp;</div>
+<div id="rhythm"></div>
+
+<div id="columnWrap">
+  <div id="column" role="progressbar" aria-label="Breath" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+    <div id="fill"></div>
+  </div>
+</div>
+
+<div id="controls">
+  <div id="options">
+    <button class="opt" id="optTone" aria-pressed="true"><span class="dot"></span>Tone</button>
+    <button class="opt" id="optVoice" aria-pressed="false"><span class="dot"></span>Voice</button>
+  </div>
+  <button id="startBtn">Start</button>
+</div>
+
+<!-- settings -->
+<div id="settings" role="dialog" aria-modal="true" aria-label="Settings">
+  <div id="panel">
+    <h2>Settings</h2>
+
+    <div class="rowlabel">Presets</div>
+    <div class="pills">
+      <button class="pill preset" data-p="5.5,0,5.5,0,5">Coherence 5.5</button>
+      <button class="pill preset" data-p="4,4,4,4,5">Box 4-4-4-4</button>
+      <button class="pill preset" data-p="4,7,8,0,5">4-7-8</button>
+    </div>
+
+    <div class="rowlabel">Voice language</div>
+    <div class="pills" id="langRow">
+      <button class="pill lang" data-lang="en" aria-pressed="true">EN &middot; in / out</button>
+      <button class="pill lang" data-lang="fr" aria-pressed="false">FR &middot; inspirez / expirez</button>
+      <button class="pill lang" data-lang="de" aria-pressed="false">DE &middot; ein / aus</button>
+    </div>
+
+    <div class="rowlabel">Rhythm</div>
+    <div class="field">
+      <label for="sInhale"><span id="lblIn">Breathe in</span> <output id="vInhale">5.5 s</output></label>
+      <input type="range" id="sInhale" min="2" max="10" step="0.5" value="5.5">
+    </div>
+    <div class="field">
+      <label for="sHoldIn"><span id="lblHoldIn">Hold (after in)</span> <output id="vHoldIn">0 s</output></label>
+      <input type="range" id="sHoldIn" min="0" max="10" step="0.5" value="0">
+    </div>
+    <div class="field">
+      <label for="sExhale"><span id="lblOut">Breathe out</span> <output id="vExhale">5.5 s</output></label>
+      <input type="range" id="sExhale" min="2" max="10" step="0.5" value="5.5">
+    </div>
+    <div class="field">
+      <label for="sHoldOut"><span id="lblHoldOut">Hold (after out)</span> <output id="vHoldOut">0 s</output></label>
+      <input type="range" id="sHoldOut" min="0" max="10" step="0.5" value="0">
+    </div>
+    <div class="field">
+      <label for="sSession">Session length <output id="vSession">5 min</output></label>
+      <input type="range" id="sSession" min="1" max="20" step="1" value="5">
+    </div>
+
+    <button id="closeSettings">Done</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---- i18n ----
+  const LANGS = {
+    en: { code:'en-US', in:'in',       out:'out',     hold:'hold',
+          labelIn:'Breathe in', labelOut:'Breathe out', labelHold:'Hold', done:'Done' },
+    fr: { code:'fr-FR', in:'inspirez', out:'expirez', hold:'retenez',
+          labelIn:'Inspirez',   labelOut:'Expirez',     labelHold:'Retenez', done:'Termin\u00e9' },
+    de: { code:'de-DE', in:'ein',      out:'aus',     hold:'halten',
+          labelIn:'Einatmen',   labelOut:'Ausatmen',    labelHold:'Halten',  done:'Fertig' },
+  };
+
+  // ---- state ----
+  const cfg = { inhale:5.5, holdIn:0, exhale:5.5, holdOut:0, sessionMin:5, lang:'en' };
+  const L = () => LANGS[cfg.lang];
+
+  const $ = id => document.getElementById(id);
+  const clock = $('clock'), phaseEl = $('phase'), rhythm = $('rhythm');
+  const fill = $('fill'), column = $('column'), btn = $('startBtn');
+  const settings = $('settings');
+
+  for (let i = 1; i < 10; i++) {
+    const t = document.createElement('div');
+    t.className = 'tick';
+    t.style.bottom = (i * 10) + '%';
+    column.appendChild(t);
+  }
+
+  // ---- settings UI ----
+  const sliders = [
+    ['sInhale','vInhale','inhale',' s'],
+    ['sHoldIn','vHoldIn','holdIn',' s'],
+    ['sExhale','vExhale','exhale',' s'],
+    ['sHoldOut','vHoldOut','holdOut',' s'],
+    ['sSession','vSession','sessionMin',' min'],
+  ];
+  function refreshSliderUI() {
+    sliders.forEach(([sid, vid, key, unit]) => {
+      $(sid).value = cfg[key];
+      $(vid).textContent = cfg[key] + unit;
+    });
+    updateRhythmLine();
+  }
+  sliders.forEach(([sid, vid, key, unit]) => {
+    $(sid).addEventListener('input', e => {
+      cfg[key] = parseFloat(e.target.value);
+      $(vid).textContent = cfg[key] + unit;
+      updateRhythmLine();
+    });
+  });
+  document.querySelectorAll('.preset').forEach(p => {
+    p.onclick = () => {
+      const [a,b,c,d,m] = p.dataset.p.split(',').map(Number);
+      Object.assign(cfg, { inhale:a, holdIn:b, exhale:c, holdOut:d, sessionMin:m });
+      refreshSliderUI();
+    };
+  });
+  document.querySelectorAll('.lang').forEach(b => {
+    b.onclick = () => {
+      cfg.lang = b.dataset.lang;
+      document.querySelectorAll('.lang').forEach(x =>
+        x.setAttribute('aria-pressed', x === b));
+      applyLanguage();
+    };
+  });
+  function applyLanguage() {
+    const l = L();
+    $('lblIn').textContent      = l.labelIn;
+    $('lblOut').textContent     = l.labelOut;
+    $('lblHoldIn').textContent  = l.labelHold + ' \u00b7 1';
+    $('lblHoldOut').textContent = l.labelHold + ' \u00b7 2';
+    document.documentElement.lang = cfg.lang;
+  }
+  function updateRhythmLine() {
+    const cyc = cfg.inhale + cfg.holdIn + cfg.exhale + cfg.holdOut;
+    const bpm = (60 / cyc).toFixed(1);
+    const n = Math.floor(cfg.sessionMin * 60 / cyc);
+    rhythm.textContent = `${cyc}s cycle \u00b7 ${bpm}/min \u00b7 ${n} breaths`;
+  }
+
+  $('gearBtn').onclick = () => { if (running) stop(true); settings.classList.add('open'); };
+  $('closeSettings').onclick = () => { settings.classList.remove('open'); resetDisplay(); };
+  settings.addEventListener('click', e => { if (e.target === settings) $('closeSettings').click(); });
+
+  // ---- options ----
+  const toggles = { tone:true, voice:false };
+  $('optTone').onclick  = e => { toggles.tone  = !toggles.tone;  e.currentTarget.setAttribute('aria-pressed', toggles.tone); };
+  $('optVoice').onclick = e => { toggles.voice = !toggles.voice; e.currentTarget.setAttribute('aria-pressed', toggles.voice); };
+
+  // ---- audio ----
+  let audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function tone(f0, f1) {
+    if (!toggles.tone || !audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(f0, t0);
+    osc.frequency.exponentialRampToValueAtTime(f1, t0 + 0.6);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7);
+    osc.connect(g).connect(audioCtx.destination);
+    osc.start(t0); osc.stop(t0 + 0.75);
+  }
+  function speak(word) {
+    if (!toggles.voice || !('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(word);
+    u.lang = L().code;
+    u.rate = 0.9; u.volume = 0.9;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  }
+  const CUES = {
+    in:   () => { tone(330, 520); speak(L().in); },
+    out:  () => { tone(520, 300); speak(L().out); },
+    hold: () => { tone(420, 420); speak(L().hold); },
+  };
+
+  // ---- wake lock ----
+  let wakeLock = null;
+  async function grabWakeLock() {
+    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (running && document.visibilityState === 'visible') grabWakeLock();
+  });
+
+  // ---- phase engine ----
+  function buildPhases() {
+    const list = [];
+    list.push({ label:'labelIn',  dur:cfg.inhale, cue:'in',  fill:t => t });
+    if (cfg.holdIn  > 0) list.push({ label:'labelHold', dur:cfg.holdIn,  cue:'hold', fill:() => 1 });
+    list.push({ label:'labelOut', dur:cfg.exhale, cue:'out', fill:t => 1 - t });
+    if (cfg.holdOut > 0) list.push({ label:'labelHold', dur:cfg.holdOut, cue:'hold', fill:() => 0 });
+    let acc = 0;
+    list.forEach(p => { p.start = acc; acc += p.dur; });
+    return { list, cycle: acc };
+  }
+
+  let running = false, startTime = 0, rafId = 0;
+  let lastPhaseKey = '', lastClockStr = '', lastAria = -1;
+  let phases = null;
+
+  // Hand one whole phase to the browser as a CSS transition.
+  // The compositor animates it on its own thread — main-thread jank
+  // (GC, timers, audio node creation) can no longer stutter the bar.
+  function startPhaseAnimation(ph, alreadyElapsed) {
+    const fromY = (1 - ph.fill(Math.min(1, alreadyElapsed / ph.dur))) * 100;
+    const toY   = (1 - ph.fill(1)) * 100;
+    const dur   = Math.max(0, ph.dur - alreadyElapsed);
+    fill.style.transition = 'none';
+    fill.style.transform = 'translateY(' + fromY.toFixed(3) + '%)';
+    void fill.offsetHeight; // flush so the transition starts from fromY
+    fill.style.transition = 'transform ' + dur.toFixed(3) + 's linear';
+    fill.style.transform = 'translateY(' + toY.toFixed(3) + '%)';
+    column.setAttribute('aria-valuenow', Math.round(ph.fill(1) * 100));
+  }
+
+  function loop(now) {
+    const elapsed = (now - startTime) / 1000;
+    const sessionSec = cfg.sessionMin * 60;
+    const remaining = Math.max(0, sessionSec - elapsed);
+
+    // clock: write to the DOM only when the displayed second changes
+    const rs = Math.ceil(remaining);
+    const cs = Math.floor(rs / 60) + ':' + String(rs % 60).padStart(2, '0');
+    if (cs !== lastClockStr) { lastClockStr = cs; clock.textContent = cs; }
+
+    const inCycle = elapsed % phases.cycle;
+    const cycleNo = Math.floor(elapsed / phases.cycle);
+    const ph = phases.list.find(p => inCycle >= p.start && inCycle < p.start + p.dur) || phases.list[0];
+
+    const key = cycleNo + '/' + ph.start;
+    if (key !== lastPhaseKey) {
+      lastPhaseKey = key;
+      // if we detected the boundary a few ms late, start mid-phase so timing stays exact
+      startPhaseAnimation(ph, inCycle - ph.start);
+      CUES[ph.cue]();
+      phaseEl.textContent = L()[ph.label];
+    }
+
+    if (remaining <= 0) return finish();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function start() {
+    ensureAudio();
+    grabWakeLock();
+    phases = buildPhases();
+    running = true;
+    lastPhaseKey = ''; lastClockStr = ''; lastAria = -1;
+    startTime = performance.now();
+    btn.textContent = 'Stop';
+    btn.classList.add('stop');
+    rafId = requestAnimationFrame(loop);
+  }
+  function stop(reset) {
+    running = false;
+    cancelAnimationFrame(rafId);
+    if (wakeLock) { wakeLock.release().catch(()=>{}); wakeLock = null; }
+    btn.textContent = 'Start';
+    btn.classList.remove('stop');
+    if (reset) resetDisplay();
+  }
+  function resetDisplay() {
+    clock.textContent = cfg.sessionMin + ':00';
+    phaseEl.innerHTML = '&nbsp;';
+    fill.style.transition = 'none';
+    fill.style.transform = 'translateY(100%)';
+  }
+  function finish() {
+    if (toggles.tone && audioCtx) {
+      tone(660, 660); setTimeout(() => tone(550, 550), 350); setTimeout(() => tone(440, 440), 700);
+    }
+    phaseEl.textContent = L().done;
+    fill.style.transition = 'none';
+    fill.style.transform = 'translateY(100%)';
+    clock.textContent = '0:00';
+    stop(false);
+  }
+
+  btn.onclick = () => running ? stop(true) : start();
+
+  applyLanguage();
+  refreshSliderUI();
+  resetDisplay();
+})();
+</script>
+</body>
+</html>
