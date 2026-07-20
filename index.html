@@ -227,6 +227,22 @@
   const cfg = { inhale:5.5, holdIn:0, exhale:5.5, holdOut:0, sessionMin:5, lang:'en' };
   const L = () => LANGS[cfg.lang];
 
+  // ---- persistence: saved on the user's device, restored on next visit.
+  // try/catch so environments without storage (private mode, sandboxed preview) just skip it.
+  const STORE = 'atmen-settings-v1';
+  function saveSettings() {
+    try { localStorage.setItem(STORE, JSON.stringify({ cfg: cfg, toggles: toggles })); } catch (e) {}
+  }
+  function loadSettings() {
+    try {
+      const raw = localStorage.getItem(STORE);
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      if (s.cfg) Object.assign(cfg, s.cfg);
+      if (s.toggles) Object.assign(toggles, s.toggles);
+    } catch (e) {}
+  }
+
   const $ = id => document.getElementById(id);
   const clock = $('clock'), phaseEl = $('phase'), rhythm = $('rhythm');
   const fill = $('fill'), column = $('column'), btn = $('startBtn');
@@ -259,6 +275,7 @@
       cfg[key] = parseFloat(e.target.value);
       $(vid).textContent = cfg[key] + unit;
       updateRhythmLine();
+      saveSettings();
     });
   });
   document.querySelectorAll('.preset').forEach(p => {
@@ -266,6 +283,7 @@
       const [a,b,c,d,m] = p.dataset.p.split(',').map(Number);
       Object.assign(cfg, { inhale:a, holdIn:b, exhale:c, holdOut:d, sessionMin:m });
       refreshSliderUI();
+      saveSettings();
     };
   });
   document.querySelectorAll('.lang').forEach(b => {
@@ -274,6 +292,7 @@
       document.querySelectorAll('.lang').forEach(x =>
         x.setAttribute('aria-pressed', x === b));
       applyLanguage();
+      saveSettings();
     };
   });
   function applyLanguage() {
@@ -297,8 +316,8 @@
 
   // ---- options ----
   const toggles = { tone:true, voice:false };
-  $('optTone').onclick  = e => { toggles.tone  = !toggles.tone;  e.currentTarget.setAttribute('aria-pressed', toggles.tone); };
-  $('optVoice').onclick = e => { toggles.voice = !toggles.voice; e.currentTarget.setAttribute('aria-pressed', toggles.voice); };
+  $('optTone').onclick  = e => { toggles.tone  = !toggles.tone;  e.currentTarget.setAttribute('aria-pressed', toggles.tone);  saveSettings(); };
+  $('optVoice').onclick = e => { toggles.voice = !toggles.voice; e.currentTarget.setAttribute('aria-pressed', toggles.voice); saveSettings(); };
 
   // ---- audio ----
   let audioCtx = null;
@@ -438,6 +457,11 @@
 
   btn.onclick = () => running ? stop(true) : start();
 
+  loadSettings();
+  $('optTone').setAttribute('aria-pressed', toggles.tone);
+  $('optVoice').setAttribute('aria-pressed', toggles.voice);
+  document.querySelectorAll('.lang').forEach(x =>
+    x.setAttribute('aria-pressed', x.dataset.lang === cfg.lang));
   applyLanguage();
   refreshSliderUI();
   resetDisplay();
