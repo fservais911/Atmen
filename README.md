@@ -17,4 +17,6 @@ Open `index.html` in any modern browser. No build step, no dependencies.
 - Presets: Coherence 5.5, Box 4-4-4-4, 4-7-8
 - Fully adjustable rhythm (inhale / hold / exhale / hold) and session length
 - Settings persist on the device (`localStorage`)
+- Checks once per launch for a newer deployed version and reloads past the cache
+  (iOS Safari otherwise serves a stale copy for days)
 - Screen wake lock keeps the display on during a session

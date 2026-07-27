@@ -354,8 +354,28 @@
     rhythm.textContent = `${cyc}s cycle \u00b7 ${bpm}/min \u00b7 ${n} breaths`;
   }
 
-  const APP_VERSION = 'v1.7';
+  const APP_VERSION = 'v1.8';
   $('ver').textContent = APP_VERSION;
+
+  // iOS Safari can hold a page — a Home Screen one especially — long past the
+  // 10 minutes GitHub Pages asks for, so a deploy never reaches the phone. Read our
+  // own source past the cache once per launch; if a newer version is live, come back
+  // through a URL the cache has never seen. The sessionStorage flag is what stops
+  // this from ever becoming a reload loop: it is set before the reload, and a failure
+  // to set it aborts the reload rather than risking a repeat.
+  const RELOAD_KEY = 'atmen-reloaded';
+  function checkForUpdate() {
+    try { if (sessionStorage.getItem(RELOAD_KEY)) return; } catch (e) { return; }
+    fetch(location.pathname + '?_=' + Date.now(), { cache:'no-store' })
+      .then(r => r.ok ? r.text() : null)
+      .then(src => {
+        const m = src && src.match(/APP_VERSION = '([^']+)'/);
+        if (!m || m[1] === APP_VERSION) return;
+        try { sessionStorage.setItem(RELOAD_KEY, m[1]); } catch (e) { return; }
+        location.replace(location.pathname + '?v=' + encodeURIComponent(m[1]));
+      })
+      .catch(() => {});
+  }
   $('closeX').onclick = () => $('closeSettings').click();
 
   let lastFocus = null;
@@ -382,8 +402,19 @@
 
   // ---- audio ----
   let audioCtx = null, noiseBuf = null;
+  // Schedule a hair ahead of "now": iOS resumes a context asynchronously, so an
+  // event booked at currentTime can land in the past and come out clipped or silent.
+  const LEAD = 0.06;
   function ensureAudio() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      // iOS only truly starts a context once something has played inside a user
+      // gesture; one silent sample is enough to unlock it.
+      const s = audioCtx.createBufferSource();
+      s.buffer = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+      s.connect(audioCtx.destination);
+      s.start(0);
+    }
     if (audioCtx.state === 'suspended') audioCtx.resume();
   }
   function noise() {
@@ -515,12 +546,12 @@
 
   function tone(f0, f1) {
     if (!toggles.tone || !audioCtx) return;
-    TONES[cfg.tone](audioCtx.currentTime, f0, f1);
+    TONES[cfg.tone](audioCtx.currentTime + LEAD, f0, f1);
   }
   // Preview ignores the tone toggle: tapping a tone pill is an explicit request to hear it.
   function previewTone(name) {
     ensureAudio();
-    const t = audioCtx.currentTime;
+    const t = audioCtx.currentTime + LEAD;
     TONES[name](t, 330, 520);
     TONES[name](t + spacing(name), 520, 300);
   }
@@ -632,7 +663,7 @@
   }
   function finish() {
     if (toggles.tone && audioCtx) {
-      const t = audioCtx.currentTime, step = spacing(cfg.tone) * 0.32;
+      const t = audioCtx.currentTime + LEAD, step = spacing(cfg.tone) * 0.32;
       [660, 550, 440].forEach((f, i) => TONES[cfg.tone](t + i * step, f, f));
     }
     phaseEl.textContent = L().done;
@@ -655,6 +686,7 @@
   applyLanguage();
   refreshSliderUI();
   resetDisplay();
+  checkForUpdate();
 })();
 </script>
 </body>
