@@ -194,11 +194,24 @@
     <div class="pills" id="toneRow">
       <button class="pill tone" data-tone="chime" aria-pressed="true">Chime</button>
       <button class="pill tone" data-tone="bell"  aria-pressed="false">Bell</button>
-      <button class="pill tone" data-tone="bowl"  aria-pressed="false">Bowl</button>
       <button class="pill tone" data-tone="wood"  aria-pressed="false">Wood</button>
       <button class="pill tone" data-tone="air"   aria-pressed="false">Air</button>
     </div>
-    <p class="hint">Tap to hear it &mdash; in-breath, then out-breath.</p>
+
+    <div class="rowlabel">Temple</div>
+    <div class="pills" id="templeRow">
+      <button class="pill tone" data-tone="bowl"    aria-pressed="false">Bowl</button>
+      <button class="pill tone" data-tone="tingsha" aria-pressed="false">Tingsha</button>
+      <button class="pill tone" data-tone="ghanta"  aria-pressed="false">Ghanta</button>
+      <button class="pill tone" data-tone="gong"    aria-pressed="false">Gong</button>
+      <button class="pill tone" data-tone="bamboo"  aria-pressed="false">Bamboo</button>
+    </div>
+    <p class="hint">
+      Singing bowl, tingsha and ghanta after Himalayan instruments (Nepal / Tibet);
+      gong and bamboo after Thai ones. Synthesised, not recorded &mdash; they suggest
+      the instrument rather than reproduce it.
+    </p>
+    <p class="hint">Tap any tone to hear it &mdash; in-breath, then out-breath.</p>
 
     <div class="rowlabel">Voice language</div>
     <div class="pills" id="langRow">
@@ -341,7 +354,7 @@
     rhythm.textContent = `${cyc}s cycle \u00b7 ${bpm}/min \u00b7 ${n} breaths`;
   }
 
-  const APP_VERSION = 'v1.6';
+  const APP_VERSION = 'v1.7';
   $('ver').textContent = APP_VERSION;
   $('closeX').onclick = () => $('closeSettings').click();
 
@@ -387,7 +400,8 @@
 
   // One enveloped oscillator: attack, exponential decay, optional pitch glide.
   // Everything is scheduled on the audio clock, so a busy main thread can't smear it.
-  function osc(type, t0, f0, f1, glide, peak, attack, decay) {
+  // `out` lets a recipe route through its own filter; default is straight out.
+  function osc(type, t0, f0, f1, glide, peak, attack, decay, out) {
     const o = audioCtx.createOscillator(), g = audioCtx.createGain();
     o.type = type;
     o.frequency.setValueAtTime(f0, t0);
@@ -395,7 +409,7 @@
     g.gain.setValueAtTime(0.0001, t0);
     g.gain.exponentialRampToValueAtTime(peak, t0 + attack);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + attack + decay);
-    o.connect(g).connect(audioCtx.destination);
+    o.connect(g).connect(out || audioCtx.destination);
     o.start(t0); o.stop(t0 + attack + decay + 0.05);
   }
   // Struck metal: inharmonic partials, near-instant attack, ringing tail.
@@ -403,13 +417,20 @@
     partials.forEach(([mult, amp, len]) =>
       osc('sine', t0, f * mult, f * mult, 0, peak * amp, 0.004, decay * len));
   }
-  function tick(t0, f) {
+  // Two sets a few cents apart drift in and out of phase — the slow shimmer you
+  // hear from any struck bronze that isn't perfectly symmetrical.
+  function beat(t0, f, partials, peak, decay, detune) {
+    strike(t0, f, partials, peak, decay);
+    strike(t0, f * (1 + detune), partials, peak * 0.8, decay);
+  }
+  function tick(t0, f, peak, decay, out) {
+    peak = peak || 0.22; decay = decay || 0.05;
     const src = noise(), bp = audioCtx.createBiquadFilter(), g = audioCtx.createGain();
     bp.type = 'bandpass'; bp.frequency.value = f; bp.Q = 1.2;
-    g.gain.setValueAtTime(0.22, t0);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.05);
-    src.connect(bp).connect(g).connect(audioCtx.destination);
-    src.start(t0); src.stop(t0 + 0.06);
+    g.gain.setValueAtTime(peak, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + decay);
+    src.connect(bp).connect(g).connect(out || audioCtx.destination);
+    src.start(t0); src.stop(t0 + decay + 0.01);
   }
 
   // Each cue carries direction: rising f0->f1 for the in-breath, falling for the out-breath,
@@ -421,10 +442,51 @@
       strike(t0, f0, p, 0.22, 1.6);
       if (f1 !== f0) strike(t0 + 0.18, f1, p, 0.16, 1.4);
     },
+    // Himalayan singing bowl: an octave down, slow swell, long tail. The partials
+    // are doubled a few cents apart so the tone breathes instead of sitting still.
     bowl:  (t0, f0, f1) => {
-      // an octave down, slow swell, long shimmering tail
-      [[1, 0.20], [2.01, 0.07], [2.98, 0.04]].forEach(([mult, amp]) =>
-        osc('sine', t0, f0 * 0.5 * mult, f1 * 0.5 * mult, 1.2, amp, 0.35, 2.2));
+      [[1, 0.20], [2.01, 0.07], [2.98, 0.04]].forEach(([mult, amp]) => {
+        osc('sine', t0, f0 * 0.5 * mult, f1 * 0.5 * mult, 1.2, amp, 0.35, 2.4);
+        osc('sine', t0, f0 * 0.502 * mult, f1 * 0.502 * mult, 1.2, amp * 0.85, 0.4, 2.4);
+      });
+    },
+    // Tingsha: the little paired cymbals struck at the top and tail of a sit.
+    // Very high, very inharmonic, and the two discs are never quite in tune.
+    tingsha: (t0, f0, f1) => {
+      const p = [[1, 1, 1], [2.34, 0.6, 0.8], [3.71, 0.4, 0.6], [5.06, 0.25, 0.45]];
+      beat(t0, f0 * 2, p, 0.075, 3.0, 0.006);
+      if (f1 !== f0) beat(t0 + 0.16, f1 * 2, p, 0.045, 2.6, 0.006);
+    },
+    // Ghanta: the Himalayan ritual hand bell — deep, clangorous, slow to die away.
+    ghanta: (t0, f0, f1) => {
+      const p = [[0.5, 0.9, 1.4], [1, 1, 1], [2.7, 0.5, 0.6], [3.9, 0.3, 0.45], [5.1, 0.18, 0.3]];
+      strike(t0, f0 * 0.75, p, 0.15, 2.4);
+      if (f1 !== f0) strike(t0 + 0.2, f1 * 0.75, p, 0.10, 2.0);
+    },
+    // Thai temple gong: bronze bloom. The strike is dark and the brightness swells
+    // in behind it, so the filter opens on the in-breath and closes on the out.
+    gong:  (t0, f0, f1) => {
+      const lp = audioCtx.createBiquadFilter(), up = f1 >= f0;
+      lp.type = 'lowpass'; lp.Q = 0.8;
+      lp.frequency.setValueAtTime(up ? 300 : 2200, t0);
+      lp.frequency.exponentialRampToValueAtTime(up ? 2600 : 260, t0 + 1.4);
+      lp.connect(audioCtx.destination);
+      const f = (f0 + f1) * 0.5 * 0.25;
+      [[1, 0.22, 2.6], [1.48, 0.14, 2.2], [2.11, 0.12, 1.9],
+       [2.93, 0.09, 1.6], [4.17, 0.06, 1.2], [5.63, 0.04, 1.0]].forEach(([m, a, d]) =>
+        osc('sine', t0, f * m, f * m, 0, a, 0.12, d, lp));
+      tick(t0, 180, 0.3, 0.09, lp);   // mallet thump
+    },
+    // Thai bamboo: a hollow tube knock, rounder than the woodblock, with the
+    // breathy chiff of air moving in the tube.
+    bamboo: (t0, f0, f1) => {
+      const knock = (t, f, amp) => {
+        osc('sine', t, f, f, 0, amp, 0.004, 0.34);
+        osc('triangle', t, f * 2.7, f * 2.7, 0, amp * 0.25, 0.002, 0.10);
+        tick(t, f * 3, 0.10, 0.03);
+      };
+      knock(t0, f0, 0.26);
+      if (f1 !== f0) knock(t0 + 0.16, f1, 0.2);
     },
     wood:  (t0, f0, f1) => {
       osc('triangle', t0, f0 * 2, f0 * 2, 0, 0.3, 0.002, 0.09); tick(t0, f0 * 4);
@@ -447,6 +509,10 @@
     },
   };
 
+  // Tones that ring for seconds need room, or a demo just smears into itself.
+  const SLOW = ['bowl', 'tingsha', 'ghanta', 'gong'];
+  const spacing = name => SLOW.indexOf(name) >= 0 ? 2.2 : 1.1;
+
   function tone(f0, f1) {
     if (!toggles.tone || !audioCtx) return;
     TONES[cfg.tone](audioCtx.currentTime, f0, f1);
@@ -456,7 +522,7 @@
     ensureAudio();
     const t = audioCtx.currentTime;
     TONES[name](t, 330, 520);
-    TONES[name](t + 1.1, 520, 300);
+    TONES[name](t + spacing(name), 520, 300);
   }
   function speak(word) {
     if (!toggles.voice || !('speechSynthesis' in window)) return;
@@ -566,8 +632,8 @@
   }
   function finish() {
     if (toggles.tone && audioCtx) {
-      const t = audioCtx.currentTime;
-      [660, 550, 440].forEach((f, i) => TONES[cfg.tone](t + i * 0.35, f, f));
+      const t = audioCtx.currentTime, step = spacing(cfg.tone) * 0.32;
+      [660, 550, 440].forEach((f, i) => TONES[cfg.tone](t + i * step, f, f));
     }
     phaseEl.textContent = L().done;
     fill.style.transition = 'none';

@@ -10,7 +10,10 @@ Open `index.html` in any modern browser. No build step, no dependencies.
 
 - Animated breath column with an on-screen countdown clock
 - Audio cues: tone and/or spoken voice (EN / FR / DE)
-- Five tone characters — Chime, Bell, Bowl, Wood, Air — previewed on tap in Settings
+- Nine tone characters, previewed on tap in Settings:
+  - Chime, Bell, Wood, Air
+  - Temple: Bowl, Tingsha, Ghanta (Himalayan) · Gong, Bamboo (Thai) —
+    synthesised approximations, not recordings
 - Presets: Coherence 5.5, Box 4-4-4-4, 4-7-8
 - Fully adjustable rhythm (inhale / hold / exhale / hold) and session length
 - Settings persist on the device (`localStorage`)
