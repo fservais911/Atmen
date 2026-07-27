@@ -120,6 +120,7 @@
   }
   #closeX:focus-visible{outline:2px solid var(--breath-hi);outline-offset:2px}
   .rowlabel{font-size:.78rem;color:var(--ink-dim);letter-spacing:.12em;text-transform:uppercase;margin:18px 0 8px}
+  .hint{font-size:.75rem;color:var(--ink-dim);opacity:.75;margin:8px 0 0}
   .pills{display:flex;gap:8px;flex-wrap:wrap}
   .pill{
     padding:9px 14px;border-radius:999px;border:1px solid var(--line);
@@ -189,6 +190,16 @@
       <button class="pill preset" data-p="4,7,8,0,5">4-7-8</button>
     </div>
 
+    <div class="rowlabel">Tone</div>
+    <div class="pills" id="toneRow">
+      <button class="pill tone" data-tone="chime" aria-pressed="true">Chime</button>
+      <button class="pill tone" data-tone="bell"  aria-pressed="false">Bell</button>
+      <button class="pill tone" data-tone="bowl"  aria-pressed="false">Bowl</button>
+      <button class="pill tone" data-tone="wood"  aria-pressed="false">Wood</button>
+      <button class="pill tone" data-tone="air"   aria-pressed="false">Air</button>
+    </div>
+    <p class="hint">Tap to hear it &mdash; in-breath, then out-breath.</p>
+
     <div class="rowlabel">Voice language</div>
     <div class="pills" id="langRow">
       <button class="pill lang" data-lang="en" aria-pressed="true">EN &middot; in / out</button>
@@ -235,7 +246,7 @@
   };
 
   // ---- state ----
-  const cfg = { inhale:5.5, holdIn:0, exhale:5.5, holdOut:0, sessionMin:5, lang:'en' };
+  const cfg = { inhale:5.5, holdIn:0, exhale:5.5, holdOut:0, sessionMin:5, lang:'en', tone:'chime' };
   const L = () => LANGS[cfg.lang];
 
   // ---- persistence: saved on the user's device, restored on next visit.
@@ -297,6 +308,15 @@
       saveSettings();
     };
   });
+  document.querySelectorAll('.tone').forEach(b => {
+    b.onclick = () => {
+      cfg.tone = b.dataset.tone;
+      document.querySelectorAll('.tone').forEach(x =>
+        x.setAttribute('aria-pressed', x === b));
+      previewTone(cfg.tone);
+      saveSettings();
+    };
+  });
   document.querySelectorAll('.lang').forEach(b => {
     b.onclick = () => {
       cfg.lang = b.dataset.lang;
@@ -321,7 +341,7 @@
     rhythm.textContent = `${cyc}s cycle \u00b7 ${bpm}/min \u00b7 ${n} breaths`;
   }
 
-  const APP_VERSION = 'v1.5';
+  const APP_VERSION = 'v1.6';
   $('ver').textContent = APP_VERSION;
   $('closeX').onclick = () => $('closeSettings').click();
 
@@ -348,23 +368,95 @@
   $('optVoice').onclick = e => { toggles.voice = !toggles.voice; e.currentTarget.setAttribute('aria-pressed', toggles.voice); saveSettings(); };
 
   // ---- audio ----
-  let audioCtx = null;
+  let audioCtx = null, noiseBuf = null;
   function ensureAudio() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
   }
+  function noise() {
+    if (!noiseBuf) {
+      const n = Math.floor(audioCtx.sampleRate * 2);
+      noiseBuf = audioCtx.createBuffer(1, n, audioCtx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const src = audioCtx.createBufferSource();
+    src.buffer = noiseBuf;
+    return src;
+  }
+
+  // One enveloped oscillator: attack, exponential decay, optional pitch glide.
+  // Everything is scheduled on the audio clock, so a busy main thread can't smear it.
+  function osc(type, t0, f0, f1, glide, peak, attack, decay) {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, t0);
+    if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t0 + glide);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(peak, t0 + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + attack + decay);
+    o.connect(g).connect(audioCtx.destination);
+    o.start(t0); o.stop(t0 + attack + decay + 0.05);
+  }
+  // Struck metal: inharmonic partials, near-instant attack, ringing tail.
+  function strike(t0, f, partials, peak, decay) {
+    partials.forEach(([mult, amp, len]) =>
+      osc('sine', t0, f * mult, f * mult, 0, peak * amp, 0.004, decay * len));
+  }
+  function tick(t0, f) {
+    const src = noise(), bp = audioCtx.createBiquadFilter(), g = audioCtx.createGain();
+    bp.type = 'bandpass'; bp.frequency.value = f; bp.Q = 1.2;
+    g.gain.setValueAtTime(0.22, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.05);
+    src.connect(bp).connect(g).connect(audioCtx.destination);
+    src.start(t0); src.stop(t0 + 0.06);
+  }
+
+  // Each cue carries direction: rising f0->f1 for the in-breath, falling for the out-breath,
+  // f0 === f1 for a hold. Gliding tones bend the pitch; struck tones play it as two hits.
+  const TONES = {
+    chime: (t0, f0, f1) => osc('sine', t0, f0, f1, 0.6, 0.25, 0.05, 0.65),
+    bell:  (t0, f0, f1) => {
+      const p = [[1, 1, 1], [2.76, 0.45, 0.55], [5.4, 0.2, 0.3]];
+      strike(t0, f0, p, 0.22, 1.6);
+      if (f1 !== f0) strike(t0 + 0.18, f1, p, 0.16, 1.4);
+    },
+    bowl:  (t0, f0, f1) => {
+      // an octave down, slow swell, long shimmering tail
+      [[1, 0.20], [2.01, 0.07], [2.98, 0.04]].forEach(([mult, amp]) =>
+        osc('sine', t0, f0 * 0.5 * mult, f1 * 0.5 * mult, 1.2, amp, 0.35, 2.2));
+    },
+    wood:  (t0, f0, f1) => {
+      osc('triangle', t0, f0 * 2, f0 * 2, 0, 0.3, 0.002, 0.09); tick(t0, f0 * 4);
+      if (f1 !== f0) {
+        osc('triangle', t0 + 0.14, f1 * 2, f1 * 2, 0, 0.24, 0.002, 0.09);
+        tick(t0 + 0.14, f1 * 4);
+      }
+    },
+    air:   (t0, f0, f1) => {
+      const src = noise(), bp = audioCtx.createBiquadFilter(), g = audioCtx.createGain();
+      src.loop = true;
+      bp.type = 'bandpass'; bp.Q = 2.5;
+      bp.frequency.setValueAtTime(f0 * 2, t0);
+      if (f1 !== f0) bp.frequency.exponentialRampToValueAtTime(f1 * 2, t0 + 0.7);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.35, t0 + 0.25);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.85);
+      src.connect(bp).connect(g).connect(audioCtx.destination);
+      src.start(t0); src.stop(t0 + 0.9);
+    },
+  };
+
   function tone(f0, f1) {
     if (!toggles.tone || !audioCtx) return;
-    const t0 = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(f0, t0);
-    osc.frequency.exponentialRampToValueAtTime(f1, t0 + 0.6);
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.05);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7);
-    osc.connect(g).connect(audioCtx.destination);
-    osc.start(t0); osc.stop(t0 + 0.75);
+    TONES[cfg.tone](audioCtx.currentTime, f0, f1);
+  }
+  // Preview ignores the tone toggle: tapping a tone pill is an explicit request to hear it.
+  function previewTone(name) {
+    ensureAudio();
+    const t = audioCtx.currentTime;
+    TONES[name](t, 330, 520);
+    TONES[name](t + 1.1, 520, 300);
   }
   function speak(word) {
     if (!toggles.voice || !('speechSynthesis' in window)) return;
@@ -474,7 +566,8 @@
   }
   function finish() {
     if (toggles.tone && audioCtx) {
-      tone(660, 660); setTimeout(() => tone(550, 550), 350); setTimeout(() => tone(440, 440), 700);
+      const t = audioCtx.currentTime;
+      [660, 550, 440].forEach((f, i) => TONES[cfg.tone](t + i * 0.35, f, f));
     }
     phaseEl.textContent = L().done;
     fill.style.transition = 'none';
@@ -486,8 +579,11 @@
   btn.onclick = () => running ? stop(true) : start();
 
   loadSettings();
+  if (!TONES[cfg.tone]) cfg.tone = 'chime';   // settings saved by an older version
   $('optTone').setAttribute('aria-pressed', toggles.tone);
   $('optVoice').setAttribute('aria-pressed', toggles.voice);
+  document.querySelectorAll('.tone').forEach(x =>
+    x.setAttribute('aria-pressed', x.dataset.tone === cfg.tone));
   document.querySelectorAll('.lang').forEach(x =>
     x.setAttribute('aria-pressed', x.dataset.lang === cfg.lang));
   applyLanguage();
