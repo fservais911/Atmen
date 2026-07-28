@@ -14,7 +14,8 @@ Open `index.html` in any modern browser. No build step, no dependencies.
   - Chime, Bell, Wood, Air
   - Temple: Bowl, Tingsha, Ghanta (Himalayan) · Gong, Bamboo (Thai) —
     synthesised approximations, not recordings
-- Four themes: Night (default), Sage and Meadow (light, green), Forest (dark green)
+- Five themes: Night (default), Sage / Meadow / Konstantine (light, green),
+  Forest (dark green)
 - Presets: Coherence 5.5, Box 4-4-4-4, 4-7-8
 - Fully adjustable rhythm (inhale / hold / exhale / hold) and session length
 - Settings persist on the device (`localStorage`)

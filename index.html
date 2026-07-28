@@ -60,6 +60,22 @@
     --line:#ded7c6;
     --scrim:rgba(50,48,32,.45);
   }
+  /* Konstantine — light ground, everything on it pulled deliberately dark. */
+  :root[data-theme="konstantine"]{
+    --bg:#f7faf6;
+    --bg-soft:#e8f0e6;
+    --breath-lo:#4d9c74;
+    --breath-hi:#123d2a;
+    --accent:#17503a;
+    --accent-soft:#4d8a68;
+    --btn-lo:#0f3c29;
+    --btn-hi:#1f6647;
+    --on-accent:#f2fbf5;
+    --ink:#10251a;
+    --ink-dim:#3d5a48;
+    --line:#a9c0ae;
+    --scrim:rgba(16,37,26,.5);
+  }
   /* Forest — dark green, for practising at night. */
   :root[data-theme="forest"]{
     --bg:#0f1a13;
@@ -196,6 +212,7 @@
   .pill.theme[data-theme="night"]  .sw{background:linear-gradient(135deg,#10172a 50%,#a9ece2 50%)}
   .pill.theme[data-theme="sage"]   .sw{background:linear-gradient(135deg,#f3f7f2 50%,#2f7454 50%)}
   .pill.theme[data-theme="meadow"] .sw{background:linear-gradient(135deg,#faf7f0 50%,#4e6b33 50%)}
+  .pill.theme[data-theme="konstantine"] .sw{background:linear-gradient(135deg,#f7faf6 50%,#17503a 50%)}
   .pill.theme[data-theme="forest"] .sw{background:linear-gradient(135deg,#0f1a13 50%,#9fe0b6 50%)}
 
   .field{margin-bottom:14px}
@@ -257,6 +274,7 @@
       <button class="pill theme" data-theme="night"  aria-pressed="true"><span class="sw"></span>Night</button>
       <button class="pill theme" data-theme="sage"   aria-pressed="false"><span class="sw"></span>Sage</button>
       <button class="pill theme" data-theme="meadow" aria-pressed="false"><span class="sw"></span>Meadow</button>
+      <button class="pill theme" data-theme="konstantine" aria-pressed="false"><span class="sw"></span>Konstantine</button>
       <button class="pill theme" data-theme="forest" aria-pressed="false"><span class="sw"></span>Forest</button>
     </div>
 
@@ -336,7 +354,7 @@
   };
 
   // ---- themes ---- each one is a block of CSS variables under :root[data-theme].
-  const THEMES = ['night', 'sage', 'meadow', 'forest'];
+  const THEMES = ['night', 'sage', 'meadow', 'konstantine', 'forest'];
 
   // ---- state ----
   const cfg = { inhale:5.5, holdIn:0, exhale:5.5, holdOut:0, sessionMin:5, lang:'en', tone:'chime', theme:'night' };
@@ -450,7 +468,7 @@
     rhythm.textContent = `${cyc}s cycle \u00b7 ${bpm}/min \u00b7 ${n} breaths`;
   }
 
-  const APP_VERSION = 'v1.9';
+  const APP_VERSION = 'v1.10';
   $('ver').textContent = APP_VERSION;
 
   // iOS Safari can hold a page — a Home Screen one especially — long past the
