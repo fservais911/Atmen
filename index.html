@@ -27,6 +27,9 @@
     --ink-dim:#7c8aa5;
     --line:#28324f;
     --scrim:rgba(10,15,30,.6);
+    /* a selected pill normally shows it by going accent-coloured; themes whose
+       text is all one colour override this to fill the pill instead */
+    --pill-on:transparent;
   }
   /* Sage — light, cool green. */
   :root[data-theme="sage"]{
@@ -66,15 +69,18 @@
     --bg-soft:#e8f0e6;
     --breath-lo:#4d9c74;
     --breath-hi:#123d2a;
-    --accent:#17503a;
+    --accent:#0f2419;
     --accent-soft:#4d8a68;
     --btn-lo:#0f3c29;
     --btn-hi:#1f6647;
     --on-accent:#f2fbf5;
-    --ink:#10251a;
-    --ink-dim:#3d5a48;
+    --ink:#0f2419;
+    --ink-dim:#1a3d2b;
     --line:#a9c0ae;
     --scrim:rgba(16,37,26,.5);
+    /* every line of text here is the same very dark green, so a selected pill
+       can no longer say so by changing colour — it gets a fill instead */
+    --pill-on:#cfe3d1;
   }
   /* Forest — dark green, for practising at night. */
   :root[data-theme="forest"]{
@@ -166,7 +172,7 @@
     font-family:inherit;font-size:.85rem;color:var(--ink-dim);
     transition:color .2s,border-color .2s;
   }
-  .opt[aria-pressed="true"]{color:var(--accent);border-color:var(--accent-soft)}
+  .opt[aria-pressed="true"]{color:var(--accent);border-color:var(--accent-soft);background:var(--pill-on)}
   .opt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
 
@@ -202,7 +208,7 @@
     background:none;color:var(--ink-dim);font-family:inherit;font-size:.82rem;cursor:pointer;
     transition:color .15s,border-color .15s;
   }
-  .pill[aria-pressed="true"]{color:var(--accent);border-color:var(--accent-soft)}
+  .pill[aria-pressed="true"]{color:var(--accent);border-color:var(--accent-soft);background:var(--pill-on)}
   .pill:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
   /* A theme pill carries its own colours so the choice reads at a glance;
@@ -212,7 +218,7 @@
   .pill.theme[data-theme="night"]  .sw{background:linear-gradient(135deg,#10172a 50%,#a9ece2 50%)}
   .pill.theme[data-theme="sage"]   .sw{background:linear-gradient(135deg,#f3f7f2 50%,#2f7454 50%)}
   .pill.theme[data-theme="meadow"] .sw{background:linear-gradient(135deg,#faf7f0 50%,#4e6b33 50%)}
-  .pill.theme[data-theme="konstantine"] .sw{background:linear-gradient(135deg,#f7faf6 50%,#17503a 50%)}
+  .pill.theme[data-theme="konstantine"] .sw{background:linear-gradient(135deg,#f7faf6 50%,#123d2a 50%)}
   .pill.theme[data-theme="forest"] .sw{background:linear-gradient(135deg,#0f1a13 50%,#9fe0b6 50%)}
 
   .field{margin-bottom:14px}
@@ -468,7 +474,7 @@
     rhythm.textContent = `${cyc}s cycle \u00b7 ${bpm}/min \u00b7 ${n} breaths`;
   }
 
-  const APP_VERSION = 'v1.11';
+  const APP_VERSION = 'v1.12';
   // shown twice: under the title on the main screen, and in the settings header
   document.querySelectorAll('.ver').forEach(el => { el.textContent = APP_VERSION; });
 
