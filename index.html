@@ -8,14 +8,73 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500&display=swap" rel="stylesheet">
 <style>
-  :root{
+  /* Every colour the page uses lives here, so a theme is one block of variables.
+     --breath-* paint the rising column; --accent is the same family pulled to a
+     weight that stays readable as text on that theme's background. On a light
+     theme those two cannot be the same colour, which is why they are separate. */
+  :root,
+  :root[data-theme="night"]{
     --bg:#10172a;
     --bg-soft:#1a2340;
     --breath-lo:#3fa9a0;
     --breath-hi:#a9ece2;
+    --accent:#a9ece2;
+    --accent-soft:#3fa9a0;
+    --btn-lo:#3fa9a0;
+    --btn-hi:#a9ece2;
+    --on-accent:#0d1424;
     --ink:#e9eef5;
     --ink-dim:#7c8aa5;
     --line:#28324f;
+    --scrim:rgba(10,15,30,.6);
+  }
+  /* Sage — light, cool green. */
+  :root[data-theme="sage"]{
+    --bg:#f3f7f2;
+    --bg-soft:#e6efe6;
+    --breath-lo:#93cfae;
+    --breath-hi:#2f7454;
+    --accent:#2f7454;
+    --accent-soft:#6cb492;
+    --btn-lo:#24583f;
+    --btn-hi:#35805a;
+    --on-accent:#f3fbf6;
+    --ink:#1b2b22;
+    --ink-dim:#5a6d62;
+    --line:#d3e0d6;
+    --scrim:rgba(30,50,38,.45);
+  }
+  /* Meadow — warm paper, olive green. */
+  :root[data-theme="meadow"]{
+    --bg:#faf7f0;
+    --bg-soft:#f0ebdf;
+    --breath-lo:#a9c98a;
+    --breath-hi:#4e6b33;
+    --accent:#4e6b33;
+    --accent-soft:#8aab68;
+    --btn-lo:#3f5a29;
+    --btn-hi:#5b7c3c;
+    --on-accent:#fbfdf6;
+    --ink:#2a2b22;
+    --ink-dim:#6b6a58;
+    --line:#ded7c6;
+    --scrim:rgba(50,48,32,.45);
+  }
+  /* Forest — dark green, for practising at night. */
+  :root[data-theme="forest"]{
+    --bg:#0f1a13;
+    --bg-soft:#17251b;
+    --breath-lo:#2f7a55;
+    --breath-hi:#9fe0b6;
+    --accent:#9fe0b6;
+    --accent-soft:#2f7a55;
+    --btn-lo:#2f7a55;
+    --btn-hi:#9fe0b6;
+    --on-accent:#0b1710;
+    --ink:#e6efe6;
+    --ink-dim:#7f947f;
+    --line:#26382a;
+    --scrim:rgba(8,18,12,.6);
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
@@ -33,7 +92,7 @@
   header{width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:center;padding:4px 2px}
   header h1{font-size:.8rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-dim)}
   #gearBtn{background:none;border:none;color:var(--ink-dim);cursor:pointer;font-size:1.3rem;line-height:1;padding:6px}
-  #gearBtn:focus-visible{outline:2px solid var(--breath-hi);outline-offset:2px}
+  #gearBtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
   #clock{
     font-size:clamp(3.4rem,16vw,5rem);
@@ -43,7 +102,7 @@
   #phase{
     height:1.6rem;margin-top:8px;
     font-size:1.05rem;font-weight:400;letter-spacing:.34em;text-transform:uppercase;
-    color:var(--breath-hi);
+    color:var(--accent);
   }
   #rhythm{font-size:.78rem;color:var(--ink-dim);margin-top:6px;font-variant-numeric:tabular-nums}
 
@@ -75,13 +134,13 @@
   #startBtn{
     width:100%;padding:18px;
     font-family:inherit;font-size:1.05rem;font-weight:500;letter-spacing:.18em;text-transform:uppercase;
-    color:#0d1424;background:linear-gradient(135deg,var(--breath-hi),var(--breath-lo));
+    color:var(--on-accent);background:linear-gradient(135deg,var(--btn-hi),var(--btn-lo));
     border:none;border-radius:16px;cursor:pointer;
     transition:transform .12s;
   }
   #startBtn:active{transform:scale(.97)}
   #startBtn.stop{background:none;border:1px solid var(--line);color:var(--ink-dim)}
-  #startBtn:focus-visible{outline:2px solid var(--breath-hi);outline-offset:3px}
+  #startBtn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
   #options{display:flex;gap:10px}
   .opt{
@@ -91,14 +150,14 @@
     font-family:inherit;font-size:.85rem;color:var(--ink-dim);
     transition:color .2s,border-color .2s;
   }
-  .opt[aria-pressed="true"]{color:var(--breath-hi);border-color:var(--breath-lo)}
-  .opt:focus-visible{outline:2px solid var(--breath-hi);outline-offset:2px}
+  .opt[aria-pressed="true"]{color:var(--accent);border-color:var(--accent-soft)}
+  .opt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
 
   /* ---------- settings panel ---------- */
   #settings{
     position:fixed;inset:0;
-    background:rgba(10,15,30,.6);
+    background:var(--scrim);
     backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
     display:none;align-items:flex-end;justify-content:center;z-index:10;
   }
@@ -118,7 +177,7 @@
     width:36px;height:36px;line-height:1;
     color:var(--ink-dim);font-size:.95rem;cursor:pointer;
   }
-  #closeX:focus-visible{outline:2px solid var(--breath-hi);outline-offset:2px}
+  #closeX:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .rowlabel{font-size:.78rem;color:var(--ink-dim);letter-spacing:.12em;text-transform:uppercase;margin:18px 0 8px}
   .hint{font-size:.75rem;color:var(--ink-dim);opacity:.75;margin:8px 0 0}
   .pills{display:flex;gap:8px;flex-wrap:wrap}
@@ -127,23 +186,33 @@
     background:none;color:var(--ink-dim);font-family:inherit;font-size:.82rem;cursor:pointer;
     transition:color .15s,border-color .15s;
   }
-  .pill[aria-pressed="true"]{color:var(--breath-hi);border-color:var(--breath-lo)}
-  .pill:focus-visible{outline:2px solid var(--breath-hi);outline-offset:2px}
+  .pill[aria-pressed="true"]{color:var(--accent);border-color:var(--accent-soft)}
+  .pill:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* A theme pill carries its own colours so the choice reads at a glance;
+     they are literals because the pill has to show a theme the page isn't wearing. */
+  .pill.theme{display:inline-flex;align-items:center;gap:8px}
+  .sw{width:14px;height:14px;border-radius:50%;border:1px solid rgba(128,128,128,.35)}
+  .pill.theme[data-theme="night"]  .sw{background:linear-gradient(135deg,#10172a 50%,#a9ece2 50%)}
+  .pill.theme[data-theme="sage"]   .sw{background:linear-gradient(135deg,#f3f7f2 50%,#2f7454 50%)}
+  .pill.theme[data-theme="meadow"] .sw{background:linear-gradient(135deg,#faf7f0 50%,#4e6b33 50%)}
+  .pill.theme[data-theme="forest"] .sw{background:linear-gradient(135deg,#0f1a13 50%,#9fe0b6 50%)}
+
   .field{margin-bottom:14px}
   .field label{display:flex;justify-content:space-between;font-size:.88rem;color:var(--ink);margin-bottom:4px}
-  .field label output{color:var(--breath-hi);font-variant-numeric:tabular-nums}
+  .field label output{color:var(--accent);font-variant-numeric:tabular-nums}
   input[type=range]{width:100%;appearance:none;-webkit-appearance:none;height:32px;background:none}
   input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--line)}
   input[type=range]::-webkit-slider-thumb{
     -webkit-appearance:none;width:26px;height:26px;border-radius:50%;
-    background:var(--breath-hi);margin-top:-11px;border:none;
+    background:var(--accent);margin-top:-11px;border:none;
   }
   input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--line)}
-  input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--breath-hi);border:none}
+  input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--accent);border:none}
   #closeSettings{
     width:100%;margin-top:14px;padding:15px;
     font-family:inherit;font-size:.95rem;font-weight:500;letter-spacing:.14em;text-transform:uppercase;
-    color:#0d1424;background:linear-gradient(135deg,var(--breath-hi),var(--breath-lo));
+    color:var(--on-accent);background:linear-gradient(135deg,var(--btn-hi),var(--btn-lo));
     border:none;border-radius:14px;cursor:pointer;
   }
 
@@ -181,6 +250,14 @@
     <div id="panelHead">
       <h2>Settings <span id="ver"></span></h2>
       <button id="closeX" aria-label="Close settings">&#10005;</button>
+    </div>
+
+    <div class="rowlabel">Theme</div>
+    <div class="pills" id="themeRow">
+      <button class="pill theme" data-theme="night"  aria-pressed="true"><span class="sw"></span>Night</button>
+      <button class="pill theme" data-theme="sage"   aria-pressed="false"><span class="sw"></span>Sage</button>
+      <button class="pill theme" data-theme="meadow" aria-pressed="false"><span class="sw"></span>Meadow</button>
+      <button class="pill theme" data-theme="forest" aria-pressed="false"><span class="sw"></span>Forest</button>
     </div>
 
     <div class="rowlabel">Presets</div>
@@ -258,8 +335,11 @@
           labelIn:'Einatmen',   labelOut:'Ausatmen',    labelHold:'Halten',  done:'Fertig' },
   };
 
+  // ---- themes ---- each one is a block of CSS variables under :root[data-theme].
+  const THEMES = ['night', 'sage', 'meadow', 'forest'];
+
   // ---- state ----
-  const cfg = { inhale:5.5, holdIn:0, exhale:5.5, holdOut:0, sessionMin:5, lang:'en', tone:'chime' };
+  const cfg = { inhale:5.5, holdIn:0, exhale:5.5, holdOut:0, sessionMin:5, lang:'en', tone:'chime', theme:'night' };
   const L = () => LANGS[cfg.lang];
 
   // ---- persistence: saved on the user's device, restored on next visit.
@@ -330,6 +410,22 @@
       saveSettings();
     };
   });
+  document.querySelectorAll('.theme').forEach(b => {
+    b.onclick = () => {
+      cfg.theme = b.dataset.theme;
+      document.querySelectorAll('.theme').forEach(x =>
+        x.setAttribute('aria-pressed', x === b));
+      applyTheme();
+      saveSettings();
+    };
+  });
+  // The browser chrome (iOS status bar, Android toolbar) is told the page colour
+  // separately from CSS, so it has to be pushed by hand whenever the theme changes.
+  function applyTheme() {
+    document.documentElement.dataset.theme = cfg.theme;
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+    if (bg) document.querySelector('meta[name="theme-color"]').setAttribute('content', bg);
+  }
   document.querySelectorAll('.lang').forEach(b => {
     b.onclick = () => {
       cfg.lang = b.dataset.lang;
@@ -354,7 +450,7 @@
     rhythm.textContent = `${cyc}s cycle \u00b7 ${bpm}/min \u00b7 ${n} breaths`;
   }
 
-  const APP_VERSION = 'v1.8';
+  const APP_VERSION = 'v1.9';
   $('ver').textContent = APP_VERSION;
 
   // iOS Safari can hold a page — a Home Screen one especially — long past the
@@ -676,13 +772,18 @@
   btn.onclick = () => running ? stop(true) : start();
 
   loadSettings();
-  if (!TONES[cfg.tone]) cfg.tone = 'chime';   // settings saved by an older version
+  // settings saved by an older version, or by a build that had other names
+  if (!TONES[cfg.tone]) cfg.tone = 'chime';
+  if (THEMES.indexOf(cfg.theme) < 0) cfg.theme = 'night';
   $('optTone').setAttribute('aria-pressed', toggles.tone);
   $('optVoice').setAttribute('aria-pressed', toggles.voice);
   document.querySelectorAll('.tone').forEach(x =>
     x.setAttribute('aria-pressed', x.dataset.tone === cfg.tone));
+  document.querySelectorAll('.theme').forEach(x =>
+    x.setAttribute('aria-pressed', x.dataset.theme === cfg.theme));
   document.querySelectorAll('.lang').forEach(x =>
     x.setAttribute('aria-pressed', x.dataset.lang === cfg.lang));
+  applyTheme();
   applyLanguage();
   refreshSliderUI();
   resetDisplay();
